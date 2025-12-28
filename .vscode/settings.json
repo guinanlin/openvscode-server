@@ -226,5 +226,11 @@
 		"kusto"
 	],
 	"azureMcp.serverMode": "all",
-	"azureMcp.readOnly": true
+	"azureMcp.readOnly": true,
+
+	// --- Markdown Default Preview ---
+	// Associate .md files with Markdown preview by default
+	"workbench.editorAssociations": {
+		"*.md": "vscode.markdown.preview.editor"
+	}
 }
