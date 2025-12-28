@@ -3,7 +3,8 @@
 		"esModuleInterop": true,
 		"target": "ES2024",
 		"lib": [
-			"ES2024"
+			"ES2024",
+			"dom"
 		],
 		"module": "commonjs",
 		"strict": true,

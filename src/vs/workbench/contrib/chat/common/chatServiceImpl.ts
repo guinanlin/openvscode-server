@@ -23,8 +23,10 @@ import { IConfigurationService } from '../../../../platform/configuration/common
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { Progress } from '../../../../platform/progress/common/progress.js';
+import { IProductService } from '../../../../platform/product/common/productService.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
+import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
 import { IExtensionService } from '../../../services/extensions/common/extensions.js';
 import { IMcpService } from '../../mcp/common/mcpTypes.js';
 import { IChatAgentCommand, IChatAgentData, IChatAgentHistoryEntry, IChatAgentRequest, IChatAgentResult, IChatAgentService } from './chatAgents.js';
@@ -117,6 +119,7 @@ export class ChatService extends Disposable implements IChatService {
 		@IChatTransferService private readonly chatTransferService: IChatTransferService,
 		@IChatSessionsService private readonly chatSessionService: IChatSessionsService,
 		@IMcpService private readonly mcpService: IMcpService,
+		@IProductService private readonly productService: IProductService,
 	) {
 		super();
 
@@ -355,7 +358,36 @@ export class ChatService extends Disposable implements IChatService {
 	async activateDefaultAgent(location: ChatAgentLocation): Promise<void> {
 		await this.extensionService.whenInstalledExtensionsRegistered();
 
-		const defaultAgentData = this.chatAgentService.getContributedDefaultAgent(location) ?? this.chatAgentService.getContributedDefaultAgent(ChatAgentLocation.Chat);
+		let defaultAgentData = this.chatAgentService.getContributedDefaultAgent(location) ?? this.chatAgentService.getContributedDefaultAgent(ChatAgentLocation.Chat);
+
+		// If no default agent found, try to activate the extension based on product configuration
+		if (!defaultAgentData) {
+			const productDefaultChatAgent = this.productService.defaultChatAgent;
+			if (productDefaultChatAgent) {
+				// Activate the extension based on product configuration
+				// Extract the vendor ID from the provider (e.g., "kimi" from provider.default.id)
+				const vendorId = productDefaultChatAgent.provider?.default?.id ?? productDefaultChatAgent.extensionId.split('.').pop() ?? 'chat';
+				const extensionId = new ExtensionIdentifier(productDefaultChatAgent.extensionId);
+
+				console.log(`Chat: Activating default agent extension: ${productDefaultChatAgent.extensionId}, vendor: ${vendorId}`);
+
+				await this.extensionService.activateById(extensionId, {
+					activationEvent: `onLanguageModelChatProvider:${vendorId}`,
+					extensionId: extensionId,
+					startup: false
+				});
+
+				// Try again to get the agent data after activation
+				defaultAgentData = this.chatAgentService.getContributedDefaultAgent(location) ?? this.chatAgentService.getContributedDefaultAgent(ChatAgentLocation.Chat);
+
+				if (defaultAgentData) {
+					console.log(`Chat: Successfully activated default agent: ${defaultAgentData.id}`);
+				} else {
+					console.warn(`Chat: Extension activated but no agent data found`);
+				}
+			}
+		}
+
 		if (!defaultAgentData) {
 			throw new ErrorNoTelemetry('No default agent contributed');
 		}

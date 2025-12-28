@@ -7,7 +7,8 @@
   "license": "MIT",
   "private": true,
   "activationEvents": [
-    "onLanguageModelChatProvider:kimi"
+    "onLanguageModelChatProvider:kimi",
+    "onAuthenticationRequest:kimi"
   ],
   "main": "./out/extension.js",
   "engines": {
@@ -22,6 +23,12 @@
         "vendor": "kimi",
         "displayName": "Kimi (GitCode)",
         "managementCommand": "kimi.manageApiKey"
+      }
+    ],
+    "authenticationProviders": [
+      {
+        "id": "kimi",
+        "label": "Kimi"
       }
     ],
     "commands": [

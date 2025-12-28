@@ -1105,6 +1105,20 @@
 	},
 	"builtInExtensions": [
 		{
+			"name": "vscode.kimi-chat-extension",
+			"version": "0.1.0",
+			"repo": "local",
+			"metadata": {
+				"id": "kimi-chat-extension",
+				"publisherId": {
+					"publisherId": "vscode",
+					"publisherName": "vscode",
+					"displayName": "VS Code"
+				},
+				"publisherDisplayName": "VS Code"
+			}
+		},
+		{
 			"name": "ms-vscode.js-debug-companion",
 			"version": "1.1.3",
 			"sha256": "7380a890787452f14b2db7835dfa94de538caf358ebc263f9d46dd68ac52de93",
@@ -1153,15 +1167,47 @@
 			}
 		}
 	],
-	"extensionsGallery": {
-		"serviceUrl": "https://open-vsx.org/vscode/gallery",
-		"itemUrl": "https://open-vsx.org/vscode/item",
-		"resourceUrlTemplate": "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
-		"extensionUrlTemplate": "https://open-vsx.org/vscode/gallery/{publisher}/{name}/latest",
-		"controlUrl": "",
-		"recommendationsUrl": "",
-		"nlsBaseUrl": "",
-		"publisherUrl": ""
+	"defaultChatAgent": {
+		"extensionId": "vscode.kimi-chat-extension",
+		"chatExtensionId": "vscode.kimi-chat-extension",
+		"documentationUrl": "https://www.kimi.ai/",
+		"skusDocumentationUrl": "https://www.kimi.ai/",
+		"publicCodeMatchesUrl": "https://www.kimi.ai/",
+		"manageSettingsUrl": "https://www.kimi.ai/",
+		"managePlanUrl": "https://www.kimi.ai/",
+		"manageOverageUrl": "https://www.kimi.ai/",
+		"upgradePlanUrl": "https://www.kimi.ai/",
+		"signUpUrl": "https://www.kimi.ai/",
+		"termsStatementUrl": "https://www.kimi.ai/",
+		"privacyStatementUrl": "https://www.kimi.ai/",
+		"provider": {
+			"default": {
+				"id": "kimi",
+				"name": "Kimi"
+			},
+			"enterprise": {
+				"id": "kimi",
+				"name": "Kimi"
+			},
+			"google": {
+				"id": "kimi",
+				"name": "Kimi"
+			},
+			"apple": {
+				"id": "kimi",
+				"name": "Kimi"
+			}
+		},
+		"providerUriSetting": "kimi.apiBaseUrl",
+		"providerScopes": [
+			[
+				"chatProvider"
+			]
+		],
+		"entitlementUrl": "https://www.kimi.ai/",
+		"entitlementSignupLimitedUrl": "https://www.kimi.ai/",
+		"chatQuotaExceededContext": "kimiChatQuotaExceeded",
+		"completionsQuotaExceededContext": "kimiCompletionsQuotaExceeded"
 	},
 	"linkProtectionTrustedDomains": [
 		"https://open-vsx.org"

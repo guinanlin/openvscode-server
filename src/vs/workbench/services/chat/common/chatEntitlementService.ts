@@ -201,8 +201,12 @@ interface IChatQuotasAccessor {
 const CHAT_ALLOW_ANONYMOUS_CONFIGURATION_KEY = 'chat.allowAnonymousAccess';
 
 function isAnonymous(configurationService: IConfigurationService, entitlement: ChatEntitlement, sentiment: IChatSentiment): boolean {
-	if (configurationService.getValue(CHAT_ALLOW_ANONYMOUS_CONFIGURATION_KEY) !== true) {
-		return false; // only enabled behind an experimental setting
+	// Enable anonymous access for Kimi provider (local testing)
+	const allowAnonymous = configurationService.getValue(CHAT_ALLOW_ANONYMOUS_CONFIGURATION_KEY) === true;
+
+	// Allow anonymous for development/testing with Kimi (or if explicitly enabled)
+	if (!allowAnonymous && product.defaultChatAgent?.extensionId !== 'vscode.kimi-chat-extension') {
+		return false; // only enabled behind an experimental setting (except for Kimi)
 	}
 
 	if (entitlement !== ChatEntitlement.Unknown) {

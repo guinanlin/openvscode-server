@@ -50,7 +50,9 @@ async function saveApiKey(context: vscode.ExtensionContext, apiKey: string): Pro
 
 // Convert message format
 function convertMessages(messages: readonly vscode.LanguageModelChatRequestMessage[]): KimiMessage[] {
-	return messages.map(msg => {
+	console.log('Kimi: Converting messages, count:', messages.length);
+
+	const converted = messages.map((msg, index) => {
 		let role: 'system' | 'user' | 'assistant' = 'user';
 
 		// Determine message type based on role property
@@ -73,8 +75,17 @@ function convertMessages(messages: readonly vscode.LanguageModelChatRequestMessa
 			})
 			.join('');
 
+		console.log(`Kimi: Message ${index}: role=${role}, content_length=${content.length}`);
+
+		if (!content.trim()) {
+			console.warn(`Kimi: Message ${index} has empty content`);
+		}
+
 		return { role, content };
 	});
+
+	console.log('Kimi: Message conversion complete');
+	return converted;
 }
 
 // Call Kimi API and send response through progress callback
@@ -141,7 +152,17 @@ async function makeKimiRequest(
 			}
 		};
 
+		// Add timeout to prevent hanging requests
+		const timeoutId = setTimeout(() => {
+			req.destroy();
+			console.error('Kimi: API request timeout (30s elapsed)');
+			reject(new Error('Kimi API request timeout (30s elapsed)'));
+		}, 30000);  // 30 seconds timeout
+
 		const req = https.request(options, (res) => {
+			console.log('Kimi: API response status:', res.statusCode);
+			console.log('Kimi: API response headers:', JSON.stringify(res.headers));
+
 			// Check response status
 			if (res.statusCode !== 200) {
 				let errorBody = '';
@@ -149,20 +170,29 @@ async function makeKimiRequest(
 					errorBody += chunk.toString();
 				});
 				res.on('end', () => {
-					const errorMessage = errorBody || `HTTP ${res.statusCode}`;
-					reject(new Error(`Kimi API request failed: ${errorMessage}`));
+					clearTimeout(timeoutId);
+					console.error('Kimi: API error response status:', res.statusCode);
+					console.error('Kimi: API error response body:', errorBody);
+					try {
+						const errorJson = JSON.parse(errorBody);
+						const errorMessage = errorJson.error?.message || errorBody || `HTTP ${res.statusCode}`;
+						reject(new Error(`Kimi API request failed: ${errorMessage}`));
+					} catch (e) {
+						reject(new Error(`Kimi API request failed: HTTP ${res.statusCode}: ${errorBody}`));
+					}
 				});
 				res.on('error', (err) => {
+					clearTimeout(timeoutId);
+					console.error('Kimi: API response error:', err.message);
 					reject(new Error(`Kimi API request error: ${err.message}`));
 				});
 				return;
-			}
-
-			let buffer = '';
+			} let buffer = '';
 			let hasReceivedData = false;
 
-			res.on('data', (chunk) => {
+			res.on('data', (chunk: any) => {
 				hasReceivedData = true;
+				console.log('Kimi: Received chunk, size:', chunk.length);
 				buffer += chunk.toString();
 				const lines = buffer.split('\n');
 				buffer = lines.pop() || '';
@@ -176,6 +206,8 @@ async function makeKimiRequest(
 					if (trimmedLine.startsWith('data: ')) {
 						const jsonStr = trimmedLine.slice(6);
 						if (jsonStr === '[DONE]') {
+							console.log('Kimi: Stream finished ([DONE] received)');
+							clearTimeout(timeoutId);
 							resolve();
 							return;
 						}
@@ -183,23 +215,27 @@ async function makeKimiRequest(
 							const json = JSON.parse(jsonStr);
 							// Check for errors
 							if (json.error) {
+								console.error('Kimi: API error in stream:', json.error);
+								clearTimeout(timeoutId);
 								reject(new Error(`Kimi API error: ${json.error.message || JSON.stringify(json.error)}`));
 								return;
 							}
 							const content = json.choices?.[0]?.delta?.content || '';
 							if (content) {
+								console.log('Kimi: Got response chunk:', content.substring(0, 50) + '...');
 								// Send response through progress callback
 								progress.report(new vscode.LanguageModelTextPart(content));
 							}
 						} catch (e) {
 							// Ignore parsing errors, continue processing next line
-							console.warn('Failed to parse SSE data:', e, jsonStr);
+							console.warn('Failed to parse SSE data:', e, 'line:', jsonStr.substring(0, 100));
 						}
 					}
 				}
 			});
 
 			res.on('end', () => {
+				clearTimeout(timeoutId);
 				// Process remaining buffer
 				if (buffer.trim()) {
 					const trimmedLine = buffer.trim();
@@ -210,29 +246,35 @@ async function makeKimiRequest(
 								const json = JSON.parse(jsonStr);
 								// Check for errors
 								if (json.error) {
+									console.error('Kimi: Final error:', json.error);
 									reject(new Error(`Kimi API error: ${json.error.message || JSON.stringify(json.error)}`));
 									return;
 								}
 								const content = json.choices?.[0]?.delta?.content || '';
 								if (content) {
+									console.log('Kimi: Processing final chunk:', content.substring(0, 50) + '...');
 									progress.report(new vscode.LanguageModelTextPart(content));
 								}
 							} catch (e) {
 								// Ignore parsing errors
-								console.warn('Failed to parse SSE data:', e);
+								console.warn('Failed to parse final SSE data:', e);
 							}
 						}
 					}
 				}
 				// If no data received, API may have returned empty response
 				if (!hasReceivedData) {
+					console.error('Kimi: API returned empty response');
 					reject(new Error('Kimi API returned empty response'));
 					return;
 				}
+				console.log('Kimi: Response stream completed');
 				resolve();
 			});
 
-			res.on('error', (err) => {
+			res.on('error', (err: any) => {
+				clearTimeout(timeoutId);
+				console.error('Kimi: Response stream error:', err.message);
 				reject(new Error(`Kimi API response error: ${err.message}`));
 			});
 		});
@@ -281,6 +323,40 @@ async function estimateTokenCount(text: string | vscode.LanguageModelChatRequest
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Kimi Chat Extension activated');
 
+	// Register Kimi authentication provider (for Chat entitlement system)
+	// This allows the Chat system to recognize Kimi as an available auth provider
+	vscode.authentication.registerAuthenticationProvider('kimi', 'Kimi', {
+		onDidChangeSessions: new vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>().event,
+		async getSessions(_scopes?: string[]): Promise<vscode.AuthenticationSession[]> {
+			// Return a dummy session since Kimi API doesn't require traditional authentication
+			// The actual API key is handled separately
+			return [{
+				id: 'kimi-default',
+				accessToken: KIMI_DEFAULT_API_KEY,
+				account: {
+					id: 'kimi-user',
+					label: 'Kimi User'
+				},
+				scopes: []
+			}];
+		},
+		async createSession(_scopes: string[]): Promise<vscode.AuthenticationSession> {
+			// Return the default session
+			return {
+				id: 'kimi-default',
+				accessToken: KIMI_DEFAULT_API_KEY,
+				account: {
+					id: 'kimi-user',
+					label: 'Kimi User'
+				},
+				scopes: []
+			};
+		},
+		async removeSession(_sessionId: string): Promise<void> {
+			// No-op for Kimi since we don't manage sessions
+		}
+	}, { supportsMultipleAccounts: false });
+
 	// Register Kimi model provider
 	const provider = vscode.lm.registerLanguageModelChatProvider('kimi', {
 		async provideLanguageModelChatInformation(_options, _token) {
@@ -295,19 +371,15 @@ export function activate(context: vscode.ExtensionContext) {
 					maxOutputTokens: 8192,
 					isUserSelectable: true,
 					isDefault: true,
-					category: {
-						label: 'Kimi Models',
-						order: 1
-					},
 					capabilities: {
-						toolCalling: true,
+						toolCalling: false,
 						imageInput: false
 					},
 					detail: 'Kimi-K2 large language model (via GitCode API)',
 					tooltip: 'Kimi-K2 - Supports long text understanding'
 				}
 			];
-			console.log('Kimi: Returning model list:', models);
+			console.log('Kimi: Returning models:', JSON.stringify(models));
 			return models;
 		},
 

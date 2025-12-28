@@ -2,8 +2,13 @@
 	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
 		"outDir": "./out",
+		"lib": [
+			"ES2024",
+			"dom"
+		],
 		"typeRoots": [
-			"./node_modules/@types"
+			"./node_modules/@types",
+			"../../node_modules/@types"
 		],
 		"skipLibCheck": true
 	},
