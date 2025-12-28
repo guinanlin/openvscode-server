@@ -95,6 +95,7 @@ suite('ExtensionsWorkbenchServiceTest', () => {
 		instantiationService.stub(IRemoteAgentService, RemoteAgentService);
 		instantiationService.stub(IUserDataProfileService, disposableStore.add(new UserDataProfileService(toUserDataProfile('test', 'test', URI.file('foo'), URI.file('cache')))));
 
+		// @ts-ignore - Test stub type mismatch
 		instantiationService.stub(IWorkbenchExtensionManagementService, {
 			onDidInstallExtensions: didInstallEvent.event,
 			// eslint-disable-next-line local/code-no-any-casts

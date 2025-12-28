@@ -94,6 +94,7 @@ function setupTest(disposables: Pick<DisposableStore, 'add'>) {
 	instantiationService.stub(IExtensionGalleryService, ExtensionGalleryService);
 	instantiationService.stub(ISharedProcessService, TestSharedProcessService);
 
+	// @ts-ignore - Test stub type mismatch
 	instantiationService.stub(IWorkbenchExtensionManagementService, {
 		onDidInstallExtensions: didInstallEvent.event,
 		// eslint-disable-next-line local/code-no-any-casts

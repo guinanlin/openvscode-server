@@ -94,6 +94,7 @@ suite('ExtensionsViews Tests', () => {
 		instantiationService.stub(IExtensionGalleryService, ExtensionGalleryService);
 		instantiationService.stub(ISharedProcessService, TestSharedProcessService);
 
+		// @ts-ignore - Test stub type mismatch
 		instantiationService.stub(IWorkbenchExtensionManagementService, {
 			onInstallExtension: Event.None,
 			onDidInstallExtensions: Event.None,
@@ -107,7 +108,8 @@ suite('ExtensionsViews Tests', () => {
 			async canInstall() { return true; },
 			async getExtensionsControlManifest() { return { malicious: [], deprecated: {}, search: [], publisherMapping: {} }; },
 			async getTargetPlatform() { return getTargetPlatform(platform, arch); },
-			async updateMetadata(local) { return local; }
+			// @ts-ignore - Test stub type mismatch
+			async updateMetadata(local: any) { return local; }
 		});
 		instantiationService.stub(IRemoteAgentService, RemoteAgentService);
 		instantiationService.stub(IContextKeyService, new MockContextKeyService());

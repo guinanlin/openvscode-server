@@ -8,10 +8,12 @@ else
 fi
 
 function code() {
-	cd $ROOT
+	pushd $ROOT
 
-	# Sync built-in extensions
-	npm run download-builtin-extensions
+	# Get electron, compile, built-in extensions (same as code-server.sh)
+	if [[ -z "${VSCODE_SKIP_PRELAUNCH}" ]]; then
+		node build/lib/preLaunch.js
+	fi
 
 	NODE=$(node build/lib/node.js)
 	if [ ! -e $NODE ];then
@@ -19,9 +21,11 @@ function code() {
 		npm run gulp node
 	fi
 
-	NODE=$(node build/lib/node.js)
+	popd
 
-	$NODE ./scripts/code-web.js "$@"
+	NODE_ENV=development \
+	VSCODE_DEV=1 \
+	$NODE $ROOT/scripts/code-web.js "$@"
 }
 
 code "$@"

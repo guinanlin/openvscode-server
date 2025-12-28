@@ -51,7 +51,7 @@ async function main() {
 
 	const serverArgs = [];
 
-	const HOST = args['host'] ?? 'localhost';
+	const HOST = args['host'] ?? '0.0.0.0';
 	const PORT = args['port'] ?? '8080';
 
 	if (args['host'] === undefined) {

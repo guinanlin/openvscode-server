@@ -221,6 +221,7 @@ suite('ExtensionRecommendationsService Test', () => {
 		instantiationService.stub(IUriIdentityService, disposableStore.add(new UriIdentityService(instantiationService.get(IFileService))));
 		instantiationService.stub(INotificationService, new TestNotificationService());
 		instantiationService.stub(IContextKeyService, new MockContextKeyService());
+		// @ts-ignore - Test stub type mismatch
 		instantiationService.stub(IWorkbenchExtensionManagementService, {
 			onInstallExtension: Event.None,
 			onDidInstallExtensions: Event.None,
