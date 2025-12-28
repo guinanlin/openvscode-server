@@ -138,3 +138,5 @@ Extension 'ms-ceintl.vscode-language-pack-zh-hans' v1.106.0 was successfully ins
 1. 下载语言包 VSIX 文件手动安装
 2. 或者联系项目维护者讨论其他方案
 
+
+

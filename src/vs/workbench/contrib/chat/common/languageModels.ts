@@ -354,6 +354,7 @@ export class LanguageModelsService implements ILanguageModelsService {
 		this._store.add(languageModelChatProviderExtensionPoint.setHandler((extensions) => {
 
 			this._vendors.clear();
+			const vendorsToActivate: string[] = [];
 
 			for (const extension of extensions) {
 				for (const item of Iterable.wrap(extension.value)) {
@@ -373,6 +374,10 @@ export class LanguageModelsService implements ILanguageModelsService {
 					// Have some models we want from this vendor, so activate the extension
 					if (this._hasStoredModelForVendor(item.vendor)) {
 						this._extensionService.activateByEvent(`onLanguageModelChatProvider:${item.vendor}`);
+					} else {
+						// For first-time use, also activate the extension to populate models
+						// This ensures models appear in the picker without requiring manual activation via "Manage Models..."
+						vendorsToActivate.push(item.vendor);
 					}
 				}
 			}
@@ -380,6 +385,23 @@ export class LanguageModelsService implements ILanguageModelsService {
 				if (!this._vendors.has(vendor)) {
 					this._providers.delete(vendor);
 				}
+			}
+
+			// Activate all vendors that don't have stored preferences
+			// This allows models to be available immediately on server startup
+			if (vendorsToActivate.length > 0) {
+				// Use a small delay to ensure extensions are ready
+				setTimeout(() => {
+					for (const vendor of vendorsToActivate) {
+						this._extensionService.activateByEvent(`onLanguageModelChatProvider:${vendor}`).then(() => {
+							// After activation, try to resolve models if provider is registered
+							// The provider registration will trigger model resolution via registerLanguageModelProvider
+							this._logService.trace(`[LM] Activated vendor ${vendor} for initial model resolution`);
+						}).catch(err => {
+							this._logService.trace(`[LM] Failed to activate vendor ${vendor} for initial resolution:`, err);
+						});
+					}
+				}, 100);
 			}
 		}));
 	}
@@ -514,8 +536,17 @@ export class LanguageModelsService implements ILanguageModelsService {
 
 		this._providers.set(vendor, provider);
 
+		// Always try to resolve models when a provider is registered, even if there's no stored preference
+		// This ensures that models with isUserSelectable: true appear in the picker dropdown
 		if (this._hasStoredModelForVendor(vendor)) {
 			this._resolveLanguageModels(vendor, true);
+		} else {
+			// For first-time use, try to resolve models silently to populate the cache
+			// This allows models to appear in the picker without requiring manual activation via "Manage Models..."
+			this._resolveLanguageModels(vendor, true).catch(err => {
+				// Silently handle errors during initial resolution
+				this._logService.trace(`[LM] Failed to resolve models for vendor ${vendor} on initial registration:`, err);
+			});
 		}
 
 		const modelChangeListener = provider.onDidChange(async () => {

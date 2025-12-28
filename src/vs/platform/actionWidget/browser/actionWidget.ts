@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as dom from '../../../base/browser/dom.js';
 import { ActionBar } from '../../../base/browser/ui/actionbar/actionbar.js';
-import { IAnchor } from '../../../base/browser/ui/contextview/contextview.js';
+import { IAnchor, AnchorPosition } from '../../../base/browser/ui/contextview/contextview.js';
 import { IAction } from '../../../base/common/actions.js';
 import { KeyCode, KeyMod } from '../../../base/common/keyCodes.js';
 import { Disposable, DisposableStore, IDisposable, MutableDisposable } from '../../../base/common/lifecycle.js';
@@ -64,8 +64,23 @@ class ActionWidgetService extends Disposable implements IActionWidgetService {
 		const visibleContext = ActionWidgetContextKeys.Visible.bindTo(this._contextKeyService);
 
 		const list = this._instantiationService.createInstance(ActionList, user, supportsPreview, items, delegate, accessibilityProvider);
+
+		// Determine anchor position: if anchor is in the lower half of the viewport, show above
+		let anchorPosition: AnchorPosition = AnchorPosition.BELOW;
+		if (dom.isHTMLElement(anchor)) {
+			const elementPosition = dom.getDomNodePagePosition(anchor);
+			const activeWindow = dom.getWindow(anchor);
+			const viewportHeight = activeWindow.innerHeight;
+			const anchorCenterY = elementPosition.top + elementPosition.height / 2;
+			// If anchor is in the lower 60% of the viewport, show above
+			if (anchorCenterY > viewportHeight * 0.4) {
+				anchorPosition = AnchorPosition.ABOVE;
+			}
+		}
+
 		this._contextViewService.showContextView({
 			getAnchor: () => anchor,
+			anchorPosition: anchorPosition,
 			render: (container: HTMLElement) => {
 				visibleContext.set(true);
 				return this._renderWidget(container, list, actionBarActions ?? []);

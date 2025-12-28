@@ -5,7 +5,7 @@
 
 import { IContextMenuDelegate } from '../../../base/browser/contextmenu.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
-import { AnchorAlignment, AnchorAxisAlignment, IAnchor, IContextViewProvider } from '../../../base/browser/ui/contextview/contextview.js';
+import { AnchorAlignment, AnchorAxisAlignment, AnchorPosition, IAnchor, IContextViewProvider } from '../../../base/browser/ui/contextview/contextview.js';
 import { IAction } from '../../../base/common/actions.js';
 import { Event } from '../../../base/common/event.js';
 import { IDisposable } from '../../../base/common/lifecycle.js';
@@ -43,6 +43,7 @@ export interface IContextViewDelegate {
 	focus?(): void;
 	anchorAlignment?: AnchorAlignment;
 	anchorAxisAlignment?: AnchorAxisAlignment;
+	anchorPosition?: AnchorPosition; // Default: BELOW
 
 	// context views with higher layers are rendered over contet views with lower layers
 	layer?: number; // Default: 0

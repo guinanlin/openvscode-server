@@ -435,7 +435,6 @@ export class OpenModePickerAction extends Action2 {
 			tooltip: localize('setChatMode', "Set Agent"),
 			category: CHAT_CATEGORY,
 			f1: false,
-			precondition: ChatContextKeys.enabled,
 			keybinding: {
 				when: ContextKeyExpr.and(
 					ChatContextKeys.inChatInput,
@@ -448,7 +447,6 @@ export class OpenModePickerAction extends Action2 {
 					id: MenuId.ChatInput,
 					order: 1,
 					when: ContextKeyExpr.and(
-						ChatContextKeys.enabled,
 						ChatContextKeys.location.isEqualTo(ChatAgentLocation.Chat),
 						ChatContextKeys.inQuickChat.negate(),
 						ChatContextKeys.lockedToCodingAgent.negate()),

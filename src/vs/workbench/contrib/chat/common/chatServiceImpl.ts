@@ -641,7 +641,26 @@ export class ChatService extends Disposable implements IChatService {
 
 		const location = options?.location ?? model.initialLocation;
 		const attempt = options?.attempt ?? 0;
-		const defaultAgent = this.chatAgentService.getDefaultAgent(location, options?.modeInfo?.kind)!;
+		let defaultAgent = this.chatAgentService.getDefaultAgent(location, options?.modeInfo?.kind);
+
+		// If no agent found for the requested mode, try to fallback to other modes
+		if (!defaultAgent && options?.modeInfo?.kind) {
+			const requestedMode = options.modeInfo.kind;
+			const fallbackModes = [ChatModeKind.Ask, ChatModeKind.Edit, ChatModeKind.Agent].filter(mode => mode !== requestedMode);
+
+			for (const fallbackMode of fallbackModes) {
+				defaultAgent = this.chatAgentService.getDefaultAgent(location, fallbackMode);
+				if (defaultAgent) {
+					this.logService.warn('sendRequest', `No default agent available for location ${location}, mode ${requestedMode}, falling back to ${fallbackMode} mode`);
+					break;
+				}
+			}
+		}
+
+		if (!defaultAgent) {
+			this.logService.error('sendRequest', `No default agent available for location ${location}, mode ${options?.modeInfo?.kind}`);
+			throw new Error(`No default chat agent available. Please ensure a chat agent is configured.`);
+		}
 
 		const parsedRequest = this.parseChatRequest(sessionId, request, location, options);
 		const silentAgent = options?.agentIdSilent ? this.chatAgentService.getAgent(options.agentIdSilent) : undefined;
@@ -681,6 +700,11 @@ export class ChatService extends Disposable implements IChatService {
 	}
 
 	private _sendRequestAsync(model: ChatModel, sessionId: string, parsedRequest: IParsedChatRequest, attempt: number, enableCommandDetection: boolean, defaultAgent: IChatAgentData, location: ChatAgentLocation, options?: IChatSendRequestOptions): IChatSendRequestResponseState {
+		if (!defaultAgent) {
+			this.logService.error('_sendRequestAsync', `defaultAgent is undefined for location ${location}, mode ${options?.modeInfo?.kind}`);
+			throw new Error(`No default chat agent available. Please ensure a chat agent is configured.`);
+		}
+
 		const followupsCancelToken = this.refreshFollowupsCancellationToken(sessionId);
 		let request: ChatRequestModel;
 		const agentPart = 'kind' in parsedRequest ? undefined : parsedRequest.parts.find((r): r is ChatRequestAgentPart => r instanceof ChatRequestAgentPart);
@@ -910,7 +934,10 @@ export class ChatService extends Disposable implements IChatService {
 					rawResult = {};
 
 				} else {
-					throw new Error(`Cannot handle request`);
+					// This should not happen if defaultAgent is properly configured
+					const commandPartCommand = commandPart ? commandPart.slashCommand?.command : undefined;
+					this.logService.error('sendRequest', `Cannot handle request: no agent or command found. DefaultAgent: ${defaultAgent?.id}, CommandPart: ${commandPartCommand}`);
+					throw new Error(`Cannot handle request: No chat agent or command available. Please ensure a default chat agent is configured.`);
 				}
 
 				if (token.isCancellationRequested && !rawResult) {

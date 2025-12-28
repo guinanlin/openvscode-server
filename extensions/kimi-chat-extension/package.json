@@ -1,0 +1,59 @@
+{
+  "name": "kimi-chat-extension",
+  "displayName": "Kimi Chat Extension",
+  "description": "Kimi 大语言模型集成（通过 GitCode API）",
+  "version": "0.1.0",
+  "publisher": "vscode",
+  "license": "MIT",
+  "private": true,
+  "activationEvents": [
+    "onLanguageModelChatProvider:kimi"
+  ],
+  "main": "./out/extension.js",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "enabledApiProposals": [
+    "chatProvider"
+  ],
+  "contributes": {
+    "languageModelChatProviders": [
+      {
+        "vendor": "kimi",
+        "displayName": "Kimi (GitCode)",
+        "managementCommand": "kimi.manageApiKey"
+      }
+    ],
+    "commands": [
+      {
+        "command": "kimi.manageApiKey",
+        "title": "管理 Kimi API Key"
+      }
+    ],
+    "configuration": {
+      "title": "Kimi",
+      "properties": {
+        "kimi.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Kimi API Key（通过 GitCode）",
+          "scope": "application"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:kimi-chat-extension ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "22.x",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/vscode.git"
+  }
+}
+
